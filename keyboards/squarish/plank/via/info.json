@@ -2,12 +2,11 @@
   "name": "Squarish Plank",
   "vendorId": "0x4967",
   "productId": "0x0001",
+  "keycodes": ["qmk_lighting"],
+  "menus": ["qmk_rgblight"],
   "matrix": {
     "rows": 4,
     "cols": 12
-  },
-  "lighting": {
-    "extends": "qmk_rgblight"
   },
   "layouts": {
     "keymap": [
