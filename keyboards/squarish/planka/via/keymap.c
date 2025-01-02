@@ -23,7 +23,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      * │ CTRL │ GUI │ ALT │ FN │ LOWER │ TAB │ SPC │ RISE │ LEFT │ DOWN │ UP │ RIGHT │
      * └──────┴─────┴─────┴────┴───────┴─────┴─────┴──────┴──────┴──────┴────┴───────┘
      */
-    [0] = LAYOUT_ortho_4x12(    // LettersB
+    [0] = LAYOUT_ortho_4x12(    // Letters
         QK_GESC,  KC_Q,    KC_W,    KC_E,       KC_R,           KC_T,         KC_Y,       KC_U,         KC_I,         KC_O,       KC_P,       KC_BSPC,
         KC_BSLS,  KC_A,    KC_S,    KC_D,       KC_F,           KC_G,         KC_H,       KC_J,         KC_K,         KC_L,       KC_SCLN,    KC_QUOT,
         KC_LSFT,  KC_Z,    KC_X,    KC_C,       KC_V,           LT(3,KC_B),   KC_N,       KC_M,         KC_COMM,      KC_DOT,     KC_SLSH,    SH_ENT,
@@ -50,32 +50,22 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 const rgblight_segment_t PROGMEM my_capslock_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-    {13, 1, HSV_WHITE}
+    {6, 4, HSV_RED},       // Light 4 LEDs, starting with LED 6
+    {12, 4, HSV_RED}       // Light 4 LEDs, starting with LED 12
 );
-
-const rgblight_segment_t PROGMEM my_numlock_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-    {0, 1, HSV_WHITE}
-);
-
 const rgblight_segment_t PROGMEM my_layer1_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-    {8, 4, HSV_CYAN},
-    {1, 4, HSV_CYAN}
+    {9, 2, HSV_CYAN}
 );
 const rgblight_segment_t PROGMEM my_layer2_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-    {8, 4, HSV_PURPLE},
-    {1, 4, HSV_GREEN}
+    {11, 2, HSV_PURPLE}
 );
 const rgblight_segment_t PROGMEM my_layer3_layer[] = RGBLIGHT_LAYER_SEGMENTS(
-    {11, 3, HSV_ORANGE},
-    { 4, 3, HSV_BLUE}
+    {13, 2, HSV_GREEN}
 );
-
-#define FIRST_LAYER 1
 
 // Define the array of layers. Later layers take precedence
 const rgblight_segment_t* const PROGMEM my_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
     my_capslock_layer,
-    my_numlock_layer,
     my_layer1_layer,    // Overrides caps lock layer
     my_layer2_layer,    // Overrides other layers
     my_layer3_layer     // Overrides other layers
@@ -88,7 +78,6 @@ void keyboard_post_init_user(void) {
 
 bool led_update_user(led_t led_state) {
     rgblight_set_layer_state(0, led_state.caps_lock);
-    rgblight_set_layer_state(1, led_state.num_lock);
     return true;
 }
 
@@ -99,8 +88,8 @@ layer_state_t default_layer_state_set_user(layer_state_t state) {
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     uint8_t i;
-    for (i=1;i<=3; ++i){
-        rgblight_set_layer_state(i+FIRST_LAYER, layer_state_cmp(state, i));
+    for (i=0;i<=3; ++i){
+        rgblight_set_layer_state(i, layer_state_cmp(state, i));
     }
     return state;
 }
