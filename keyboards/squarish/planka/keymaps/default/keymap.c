@@ -62,6 +62,9 @@ const rgblight_segment_t PROGMEM my_capslock_layer[] = RGBLIGHT_LAYER_SEGMENTS(
 const rgblight_segment_t PROGMEM my_numlock_layer[] = RGBLIGHT_LAYER_SEGMENTS(
     {0, 1, HSV_WHITE}
 );
+const rgblight_segment_t PROGMEM my_scrolllock_layer[] = RGBLIGHT_LAYER_SEGMENTS(
+    {0, 6, HSV_WHITE}
+);
 
 const rgblight_segment_t PROGMEM my_layer1_layer[] = RGBLIGHT_LAYER_SEGMENTS(
     {9, 4, HSV_CYAN},
@@ -78,12 +81,13 @@ const rgblight_segment_t PROGMEM my_layer3_layer[] = RGBLIGHT_LAYER_SEGMENTS(
     { 3, 4, HSV_BLUE}
 );
 
-#define FIRST_LAYER 1
+#define FIRST_LAYER 2
 
 // Define the array of layers. Later layers take precedence
 const rgblight_segment_t* const PROGMEM my_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
     my_capslock_layer,
     my_numlock_layer,
+    my_scrolllock_layer,
     my_layer1_layer,    // Overrides caps lock layer
     my_layer2_layer,    // Overrides other layers
     my_layer3_layer     // Overrides other layers
@@ -97,13 +101,9 @@ void keyboard_post_init_user(void) {
 bool led_update_user(led_t led_state) {
     rgblight_set_layer_state(0, led_state.caps_lock);
     rgblight_set_layer_state(1, led_state.num_lock);
+    rgblight_set_layer_state(2, led_state.scroll_lock);
     return true;
 }
-
-/*
-layer_state_t default_layer_state_set_user(layer_state_t state) {
-    return state;
-}*/
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     uint8_t i;
