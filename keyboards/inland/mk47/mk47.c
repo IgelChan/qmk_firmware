@@ -75,18 +75,168 @@ const snled27351_led_t PROGMEM g_snled27351_leds[SNLED27351_LED_COUNT] = {
     {0, CB7_CA16,  CB8_CA16,  CB9_CA16},
 };
 
-#endif
+#define SHIFT_COLOR_CHANGE 40
 
-#ifdef RGB_MATRIX_ENABLE
+#define INDICATOR_COLOR(suffix, hue, sat)   hsv.h = (hue); hsv.s = (sat); RGB suffix ## _rgb = hsv_to_rgb(hsv);
+#define MAKE_COLOR(suffix, hue, sat)        hsv.h = (rgb_matrix_config.hsv.h+(hue))&0xff; hsv.s = (sat); RGB suffix ## _rgb = hsv_to_rgb(hsv);
+#define MAKE_COLOR_CS(suffix, hue, sat)     hsv.h = (rgb_matrix_config.hsv.h+(hue))&0xff; hsv.s = (get_mods() & MOD_MASK_SHIFT) ? (sat-SHIFT_COLOR_CHANGE) : (sat); RGB suffix ## _rgb = hsv_to_rgb(hsv);
+
+#define SET_COLOR(i,clr)  rgb_matrix_set_color(i, clr ## _rgb.r, clr ## _rgb.g, clr ## _rgb.b);
+
+#define SET_COLOR_STATE(i,clr,cond) if (cond) rgb_matrix_set_color(i, clr ## _on_rgb.r, clr ## _on_rgb.g, clr ## _on_rgb.b); else rgb_matrix_set_color(i, clr ## _off_rgb.r, clr ## _off_rgb.g, clr ## _off_rgb.b);
+
+#define MAKE_ALPHA_COLOR_CS(suffix)  hsv = rgb_matrix_config.hsv; if (is_upper) {hsv.s -= SHIFT_COLOR_CHANGE;} RGB suffix ## _rgb = hsv_to_rgb(hsv);
+
+#define SHOW_LAYER_INDICATORS
+
+//#define HIGLIGHT_MOD_TAP
+
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
         return false;
     }
 
-    if (host_keyboard_led_state().caps_lock) {
-        RGB_MATRIX_INDICATOR_SET_COLOR(12, 255, 0, 0);
+    uint8_t is_upper = ((get_mods() & MOD_MASK_SHIFT)) || host_keyboard_led_state().caps_lock;
+
+    /* Make Colors */
+    HSV      hsv;   // temporary variable
+    // use separate brightness level for indicators - repurpose effect speed setting
+    hsv.v = rgb_matrix_config.speed;
+#ifdef SHOW_LAYER_INDICATORS
+    INDICATOR_COLOR(layer, 170, 255) // blue        - 66%
+#endif
+    INDICATOR_COLOR(state_on,    0,   0) // white       - 0%
+    hsv.v >>= 1;
+    INDICATOR_COLOR(state_off,   0,   0) // white       - 0%
+
+    // normal keys use configured brightness
+    hsv.v = rgb_matrix_config.hsv.v;
+    MAKE_COLOR_CS(number,      85, 255) // green       - 33%
+    MAKE_COLOR(num_pad,     85, 180) // green       - 33%
+    MAKE_COLOR(num_number,     85, 255) // green       - 33%
+    MAKE_COLOR_CS(function,   211, 255) // purple      - 83%
+    MAKE_COLOR_CS(arrows,      41, 255) // yellow      - 16%
+    MAKE_COLOR_CS(end_arrows,  21, 255) // orange      - 8%
+    MAKE_COLOR(multimedia, 128, 255) // turquoise   - 50%
+    MAKE_COLOR(layer_mod,  170, 100) // blue        - 66%
+    MAKE_COLOR(modifier,   128, 200) // turquoise   - 50%
+    MAKE_COLOR_CS(entry,      100, 255) // sea
+    MAKE_COLOR_CS(symbol,     240, 255) // purplish
+#ifdef HIGLIGHT_MOD_TAP
+    MAKE_COLOR_CS(mod_tap,      0, 200) // red         - 0%
+#endif
+
+    MAKE_ALPHA_COLOR_CS(alpha)
+
+    uint8_t layer = get_highest_layer(layer_state|default_layer_state);
+    uint8_t default_layer = get_highest_layer(default_layer_state);
+    uint16_t k;
+    uint8_t i, row, col;
+
+    for (row = 0; row < MATRIX_ROWS; ++row) {
+        for (col = 0; col < MATRIX_COLS; ++col) {
+            i = g_led_config.matrix_co[row][col];
+            if (i < led_min || i >= led_max || i == NO_LED) continue;
+
+            k = keymap_key_to_keycode(layer, (keypos_t){col,row});
+            if(k==KC_TRANSPARENT) {
+                k = keymap_key_to_keycode(default_layer, (keypos_t){col,row});
+            }
+
+            if (k == KC_NO) {
+                rgb_matrix_set_color(i, RGB_OFF);
+                continue;
+            }
+            if (IS_QK_MOD_TAP(k)) {
+#ifdef HIGLIGHT_MOD_TAP
+                SET_COLOR(i, mod_tap)
+                continue;
+#else
+                k&=0xff;    // only look at the basic keycode
+#endif
+            }
+
+            if (k>=KC_A && k<=KC_Z) {
+                SET_COLOR(i, alpha)
+                continue;
+            }
+            if (k>=KC_MINUS && k<=KC_SLASH) {
+                SET_COLOR(i, symbol)
+                continue;
+            }
+            if (k>=KC_1 && k<=KC_0) {
+                SET_COLOR(i, number)
+                continue;
+            }
+            if (k>=KC_KP_1 && k<=KC_KP_DOT) {
+                SET_COLOR(i, num_number)
+                continue;
+            }
+            if (k>=KC_KP_SLASH && k<=KC_KP_ENTER) {
+                SET_COLOR(i, num_pad)
+                continue;
+            }
+            if (k>=KC_F1 && k<=KC_F12) {
+                SET_COLOR(i, function)
+                continue;
+            }
+            if (k==KC_HOME || k==KC_END || k==KC_PAGE_DOWN || k==KC_PAGE_UP) {
+                SET_COLOR(i, end_arrows)
+                continue;
+            }
+            if (k>=KC_RIGHT && k<=KC_UP) {
+                SET_COLOR(i, arrows)
+                continue;
+            }
+            if ((k>=KC_AUDIO_MUTE && k<=KC_MEDIA_EJECT) || (k>=KC_MEDIA_FAST_FORWARD && k<=KC_MEDIA_REWIND)) {
+                SET_COLOR(i, multimedia)
+                continue;
+            }
+            if ( k>= QK_LAYER_TAP && k<= QK_LAYER_TAP_TOGGLE_MAX /*IS_QK_LAYER_MOD(k) || IS_QK_LAYER_TAP(k) ||IS_QK_TO(k)*/ ) {
+                SET_COLOR(i, layer_mod)
+                continue;
+            }
+            if ((k >= KC_ENTER && k <= KC_TAB) || k == KC_INSERT || k == KC_DELETE || k == QK_GESC || k==KC_APPLICATION) {
+                SET_COLOR(i, entry)
+                continue;
+            }
+            if (IS_MODIFIER_KEYCODE(k)) {
+                SET_COLOR(i, modifier)
+                continue;
+            }
+#ifdef HIGLIGHT_MOD_TAP
+            if (IS_QK_MOD_TAP(k)) {
+                SET_COLOR(i, mod_tap)
+                continue;
+            }
+#endif
+            if (IS_RGB_MATRIX_KEYCODE(k) || IS_UNDERGLOW_KEYCODE(k)) {
+                SET_COLOR(i, end_arrows)   // temporarily
+                continue;
+            }
+            switch(k) {
+                case KC_NUM_LOCK:
+                    SET_COLOR_STATE(i, state, host_keyboard_led_state().num_lock)
+                    break;
+                case KC_SCROLL_LOCK:
+                    SET_COLOR_STATE(i, state, host_keyboard_led_state().scroll_lock)
+                    break;
+                case KC_CAPS_LOCK:
+                    SET_COLOR_STATE(i, state, host_keyboard_led_state().caps_lock)
+                    break;
+            }
+        }
     }
 
+#ifdef SHOW_LAYER_INDICATORS
+    /* layer state indicators */
+    static const uint8_t layer_indicator_keys[] =
+//    {39,40,42,43};  // old
+//    {41,40,39,43};  // new
+    {41,42,39,40};  // arrows
+    //{40,41,29,42}; // alpha
+    SET_COLOR(layer_indicator_keys[layer], layer)
+#endif
     return true;
 }
 #endif
